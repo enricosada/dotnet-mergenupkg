@@ -10,15 +10,15 @@
   "packInclude": {
     "lib/netstandard1.5/": "fsharpcore/*"
   },
+  "dependencies": {
+    "Microsoft.FSharp.Core.netcore": "1.0.0-alpha-160316",
+    "Microsoft.NETCore.App": {
+        "type": "platform",
+        "version": "1.0.0-rc2-23925"
+    }
+  },
   "frameworks": {
     "netstandard1.5": {
-      "dependencies": {
-        "Microsoft.FSharp.Core.netcore": "1.0.0-alpha-160316",
-        "Microsoft.NETCore.App": {
-          "type": "platform",
-          "version": "1.0.0-rc2-23925"
-        }
-      },
       "imports": [
         "portable-net45+win8",
         "dnxcore50"
