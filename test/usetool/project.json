@@ -10,7 +10,7 @@
     }
   },
   "tools": {
-    "dotnet-mergenupkg": { "target": "package", "version": "0.9.1" }	
+    "dotnet-mergenupkg": { "target": "package", "version": "0.9.4" }	
   },
   "frameworks": {
     "netstandard1.5": {
