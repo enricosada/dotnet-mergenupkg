@@ -80,7 +80,7 @@ let knownDotnetFrameworks = [
     for x in ["4.0"; "4.5"; "4.5.2"; "4.6"; "4.6.1"] do
         yield { Id = sprintf "net%s" (x.Replace(".", "")); LongName = sprintf ".NETFramework%s" x }
     for x in 1.1m .. 0.1m .. 1.5m do 
-        yield { Id = sprintf "netstandard%M" x; LongName = sprintf ".NET Platform Standard%M" x }
+        yield { Id = sprintf "netstandard%M" x; LongName = sprintf ".NETStandard%M" x }
     ]
 
 [<RequireQualifiedAccess>]
