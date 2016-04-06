@@ -5,6 +5,7 @@
   },
   "compilerName": "fsc",
   "compileFiles": [
+    "railway.fs",
     "Program.fs"
   ],
   "packInclude": {
