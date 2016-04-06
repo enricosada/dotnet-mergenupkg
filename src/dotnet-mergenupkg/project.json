@@ -7,6 +7,9 @@
   "compileFiles": [
     "Program.fs"
   ],
+  "packInclude": {
+    "lib/netstandard1.5/": "fsharpcore/*"
+  },
   "frameworks": {
     "netstandard1.5": {
       "dependencies": {
