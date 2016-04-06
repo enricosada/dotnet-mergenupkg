@@ -364,7 +364,6 @@ Options:
 
 [<EntryPoint>]
 let main argv = 
-    printfn "%A" argv
     match argv |> List.ofArray |> CommandLineArgParser.parse |> runAttempt with
     | Error x ->
         x |> List.iter (printfn "%s")
