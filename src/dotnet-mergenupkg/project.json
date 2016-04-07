@@ -1,5 +1,11 @@
 {
   "version": "0.9.6-*",
+  
+  "authors": ["Enrico Sada"],
+  "summary": "Merge nupkg dependencies",
+  "description": "Merge dependencies of two nupkg packages",
+  "tags": ["nuget", "nupkg"],
+  
   "compilationOptions": {
     "emitEntryPoint": true
   },
