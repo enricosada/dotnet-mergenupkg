@@ -211,11 +211,13 @@ module DotnetCliFSharpHelpers =
 type FilePath = string
 type DirectoryPath = string
 
-type CmdLineArguments = {
+type CmdLineArguments =
+    | Help
+    | Merge of MergeArguments
+and MergeArguments = {
         SourceNupkg: FilePath;
         CliNupkg: FilePath;
         TargetFramework: DotnetFrameworkId;
-        Help: bool;
     }
 
 module CommandLineArgParser =
@@ -246,30 +248,33 @@ module CommandLineArgParser =
     let private validateArgs argv = attempt {
         let required name o =
             match o with None -> Error [sprintf "argument %s is required" name] | Some x -> Ok x
-    
-        let! source = argv.Source |> required "--source"
-        let! other = argv.Other |> required "--other"
 
-        let validateFrameworkId fwId =
-            let f =
-                knownDotnetFrameworks
-                |> List.tryFind (fun f -> f.Id.Equals(fwId, StringComparison.OrdinalIgnoreCase))
-            match f with
-            | Some fw -> Ok fw
-            | None ->
-               knownDotnetFrameworks 
-               |> List.map (fun { Id = i; LongName = l } -> sprintf "- %s: %s" i l)
-               |> List.append [sprintf "Invalid framework id '%s'" fwId; ""; "Known frameworks: "] 
-               |> Error
+        if argv.Help then
+            return Help
+        else
+            let! source = argv.Source |> required "--source"
+            let! other = argv.Other |> required "--other"
 
-        let! fws = 
-            match argv.Frameworks with
-            | [] ->  Error [sprintf "argument %s is required" "--framework"]
-            | [ l, None ] -> l |> validateFrameworkId
-            | [ id, Some n ] -> Ok { Id = id; LongName = n }
-            | l -> Error [sprintf "multiple framework not supported"]
+            let validateFrameworkId fwId =
+                let f =
+                    knownDotnetFrameworks
+                    |> List.tryFind (fun f -> f.Id.Equals(fwId, StringComparison.OrdinalIgnoreCase))
+                match f with
+                | Some fw -> Ok fw
+                | None ->
+                knownDotnetFrameworks 
+                |> List.map (fun { Id = i; LongName = l } -> sprintf "- %s: %s" i l)
+                |> List.append [sprintf "Invalid framework id '%s'" fwId; ""; "Known frameworks: "] 
+                |> Error
 
-        return { SourceNupkg = source; CliNupkg = other; TargetFramework = fws; Help = argv.Help }
+            let! fws = 
+                match argv.Frameworks with
+                | [] ->  Error [sprintf "argument %s is required" "--framework"]
+                | [ l, None ] -> l |> validateFrameworkId
+                | [ id, Some n ] -> Ok { Id = id; LongName = n }
+                | l -> Error [sprintf "multiple framework not supported"]
+
+            return Merge { SourceNupkg = source; CliNupkg = other; TargetFramework = fws; }
         }
 
     let parse argv = attempt {
@@ -284,8 +289,8 @@ let showHelp () =
 Usage:
   dotnet mergenupkg --source a.nupkg --other b.nupkg --framework netstandard1.5
   dotnet mergenupkg --source a.nupkg --other b.nupkg --framework dnxcore50 --framework-name "DNXCore5.0"
-  dotnet mergenupkg -h | --help
-
+  dotnet mergenupkg --help
+ 
 Options:
   -h --help          Show this screen.
   --source           The path of nupkg file to update
@@ -303,12 +308,12 @@ let main argv =
         printfn ""
         showHelp()
         1
-    | Ok { Help = true } ->
+    | Ok Help ->
         printfn "MergeNupkg."
-        printfn ""
+        printfn " "
         showHelp()
         0
-    | Ok { SourceNupkg = src; CliNupkg = other; TargetFramework = fw } ->
+    | Ok (Merge { SourceNupkg = src; CliNupkg = other; TargetFramework = fw }) ->
         match src |> DotnetCliFSharpHelpers.addNetcoreToNupkg other fw |> runAttempt with
         | Ok () -> 0
         | Error x -> 
