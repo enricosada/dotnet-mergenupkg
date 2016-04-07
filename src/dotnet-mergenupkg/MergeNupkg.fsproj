@@ -55,6 +55,7 @@
   </Choose>
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
+    <Compile Include="railway.fs" />
     <Compile Include="Program.fs" />
     <None Include="project.json" />
   </ItemGroup>
