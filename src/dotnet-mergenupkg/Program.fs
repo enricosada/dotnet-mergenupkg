@@ -140,7 +140,7 @@ module Nupkg =
 
     let private nuspecEntry (archive: NupkgFile) =
         archive.Entries
-        |> Seq.tryFind (fun entry -> entry.FullName = (sprintf "%s.nuspec" "Chessie"))
+        |> Seq.tryFind (fun entry -> entry.FullName.EndsWith(".nuspec"))
 
     let private mapNuspec f archive =
         match archive |> nuspecEntry with
