@@ -231,13 +231,14 @@ module CommandLineArgParser =
     }
 
     let private parseArgs argv =
+        let trimQuotes (s: string) = s.Trim('"')  
         let rec inner s r =
             match s with
             | [] -> Ok r
-            | "--source" :: x :: xs -> inner xs { r with Source = Some x }
-            | "--other" :: x :: xs -> inner xs { r with Other = Some x }
-            | "--framework" :: x :: "--framework-name" :: n :: xs -> inner xs { r with Frameworks = [(x, Some n)] |> List.append r.Frameworks }
-            | "--framework" :: x :: xs -> inner xs { r with Frameworks = [(x, None)] |> List.append r.Frameworks }
+            | "--source" :: x :: xs -> inner xs { r with Source = Some (trimQuotes x) }
+            | "--other" :: x :: xs -> inner xs { r with Other = Some (trimQuotes x) }
+            | "--framework" :: x :: "--framework-name" :: n :: xs -> inner xs { r with Frameworks = [((trimQuotes x), Some (trimQuotes x))] |> List.append r.Frameworks }
+            | "--framework" :: x :: xs -> inner xs { r with Frameworks = [((trimQuotes x), None)] |> List.append r.Frameworks }
             | "-h" :: xs -> inner xs { r with Help = true }
             | "--help" :: xs -> inner xs { r with Help = true }
             | xs -> Error [ (sprintf "invalid args: %A" xs) ]
