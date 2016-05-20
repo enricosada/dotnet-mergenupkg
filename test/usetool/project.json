@@ -6,11 +6,11 @@
   "dependencies": {
     "Microsoft.NETCore.App": {
       "type": "platform",
-      "version": "1.0.0-rc2-23925"
+      "version": "1.0.0-rc2-3002702"
     }
   },
   "tools": {
-    "dotnet-mergenupkg": { "target": "package", "version": "0.9.*" }	
+    "dotnet-mergenupkg": { "target": "package", "version": "0.10.*" }	
   },
   "frameworks": {
     "netstandard1.5": {

@@ -1,27 +1,40 @@
 {
-  "version": "0.9.9-*",
+  "version": "0.10.0-*",
   
-  "authors": ["Enrico Sada"],
-  "summary": "Merge nupkg dependencies",
-  "description": "Merge dependencies of two nupkg packages",
-  "tags": ["nuget", "nupkg"],
+  "packOptions": {
+    "authors": ["Enrico Sada"],
+    "summary": "Merge nupkg dependencies",
+    "description": "Merge dependencies of two nupkg packages",
+    "tags": ["nuget", "nupkg"]
+  },
   
-  "compilationOptions": {
-    "emitEntryPoint": true
+  "buildOptions": {
+    "emitEntryPoint": true,
+    "compilerName": "fsc",
+    "compile": {
+      "includeFiles": [
+        "railway.fs",
+        "Program.fs"
+      ]
+    }
   },
-  "compilerName": "fsc",
-  "compileFiles": [
-    "railway.fs",
-    "Program.fs"
-  ],
-  "packInclude": {
-    "lib/netstandard1.5/": "fsharpcore/*"
-  },
+  
   "dependencies": {
-    "Microsoft.FSharp.Core.netcore": "1.0.0-alpha-160316",
+    "Microsoft.FSharp.Core.netcore": "1.0.0-alpha-160509",
     "Microsoft.NETCore.App": {
         "type": "platform",
-        "version": "1.0.0-rc2-23925"
+        "version": "1.0.0-rc2-3002702"
+    }
+  },
+
+  "tools": {
+    "dotnet-compile-fsc": {
+      "version": "1.0.0-*",
+      "imports": [
+        "dnxcore50",
+        "portable-net45+win81",
+        "netstandard1.3"
+      ]
     }
   },
   "frameworks": {
