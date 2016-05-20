@@ -170,9 +170,10 @@ module Nupkg =
         archive.Entries
         |> Seq.filter (fun e -> filterBy e.FullName)
 
-    let openFile nupkgPath mode = 
-        ZipFile.Open(nupkgPath, mode)
-        |> Ok
+    let openFile nupkgPath mode =
+        match nupkgPath |> File.Exists with
+        | true -> ZipFile.Open(nupkgPath, mode) |> Ok
+        | false -> Error [ sprintf "nupkg '%s' not found" nupkgPath ]
 
     let mergeDependency (other: NupkgFile) (fw: DotnetFrameworkId) (source: NupkgFile) =
         //normalize source nuspec
