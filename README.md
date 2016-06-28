@@ -6,7 +6,7 @@ Useful to add .NET Core dependencies (assemblies, nuspec deps) built with .NET C
 an existing .nupkg
 
 ```
-dotnet mergenupkg --source a.nupkg --other b.nupkg --framework netstandard1.5
+dotnet mergenupkg --source a.nupkg --other b.nupkg --framework netstandard1.6
 ```
 
 see `dotnet mergenupkg --help` for more info
@@ -26,23 +26,11 @@ But it can be used as a .NET CLI Extension ( **PREFERRED WAY** ).
 
 so just add in `project.json` inside tools
 
-```json
-        "dotnet-mergenupkg": { "version": "0.10.*" }
-```
-
 like:
 
-```
+```json
     "tools": {
-        "dotnet-compile-fsc": {
-            "version": "1.0.0-preview1-*",
-            "imports": [
-                "dnxcore50",
-                "portable-net45+win81",
-                "netstandard1.3"
-            ]
-        },
-        "dotnet-mergenupkg": { "version": "0.10.*" }
+        "dotnet-mergenupkg": { "version": "1.0.*" }
     },
 ```
 

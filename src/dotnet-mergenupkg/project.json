@@ -1,5 +1,5 @@
 {
-  "version": "0.10.2-*",
+  "version": "1.0.0-*",
   
   "packOptions": {
     "authors": ["Enrico Sada"],
@@ -9,6 +9,7 @@
   },
   
   "buildOptions": {
+    "debugType": "portable",
     "emitEntryPoint": true,
     "compilerName": "fsc",
     "compile": {
@@ -20,29 +21,24 @@
   },
   
   "dependencies": {
-    "Microsoft.FSharp.Core.netcore": "1.0.0-alpha-160509",
-    "Microsoft.NETCore.App": {
-        "type": "platform",
-        "version": "1.0.0-rc2-3002702"
-    }
+    "Microsoft.FSharp.Core.netcore": "1.0.0-alpha-*"
   },
 
   "tools": {
     "dotnet-compile-fsc": {
-      "version": "1.0.0-*",
-      "imports": [
-        "dnxcore50",
-        "portable-net45+win81",
-        "netstandard1.3"
-      ]
+      "version": "1.0.0-preview2-*",
+      "imports": "dnxcore50"
     }
   },
   "frameworks": {
-    "netstandard1.5": {
-      "imports": [
-        "portable-net45+win8",
-        "dnxcore50"
-      ]
+    "netcoreapp1.0": {
+      "dependencies": {
+        "Microsoft.NETCore.App": {
+            "type": "platform",
+            "version": "1.0.0"
+        }
+      },
+      "imports": "dnxcore50"
     }
   }
 }

@@ -1,12 +1,8 @@
 ﻿using System;
 
-namespace ConsoleApplication
+namespace ClassLibrary
 {
-    public class Program
+    public class Class1
     {
-        public static void Main(string[] args)
-        {
-            Console.WriteLine("Hello World!");
-        }
     }
 }
