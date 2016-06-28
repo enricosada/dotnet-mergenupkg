@@ -10,9 +10,10 @@ type DotnetFrameworkId = { Id: string; LongName: string }
     
 let knownDotnetFrameworks = [
     yield { Id = "dnxcore50"; LongName = "DNXCore5.0" }
+    yield { Id = "netcoreapp1.0"; LongName = ".NETCoreApp1.0" }
     for x in ["4.0"; "4.5"; "4.5.2"; "4.6"; "4.6.1"] do
         yield { Id = sprintf "net%s" (x.Replace(".", "")); LongName = sprintf ".NETFramework%s" x }
-    for x in 1.1m .. 0.1m .. 1.5m do 
+    for x in 1.0m .. 0.1m .. 1.6m do 
         yield { Id = sprintf "netstandard%M" x; LongName = sprintf ".NETStandard%M" x }
     ]
 
