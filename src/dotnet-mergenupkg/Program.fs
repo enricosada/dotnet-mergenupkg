@@ -157,7 +157,9 @@ module Nupkg =
         | Some nuspec ->
             let xml =
                 use stream = nuspec.Open()
-                XDocument.Load(stream)
+                use reader = new StreamReader(stream)
+                let text = reader.ReadToEnd().Replace("</package>ge>", "</package>")
+                XDocument.Parse(text)
             let doc = f xml
             use writer = new StreamWriter(nuspec.Open())
             doc.Save(writer, SaveOptions.OmitDuplicateNamespaces)
