@@ -97,7 +97,17 @@ module NuspecXml =
     let addDependencyGroup (group: NuspecFrameworkGroup) (nuspecDoc: NuspecXmlDoc) =
         let doc = XDocument(nuspecDoc)
         match doc |> dependencies with
-        | None -> failwith "TODO add dependencies node"
+        | None ->
+            let xn name = XName.Get(name, doc.Root.Name.NamespaceName)
+            let m = doc.Root |> xe (xn "metadata") |> Option.get
+            m.Add(new XElement(xn "dependencies"))
+            match doc |> dependencies with
+            | None ->
+                failwith "TODO added dependencies node, but cannot find it"
+            | Some d ->
+                let g = group |> changeNamespaceElement d.Name.Namespace
+                d.Add(g)
+                doc
         | Some d ->
             let g = group |> changeNamespaceElement d.Name.Namespace
             d.Add(g)
