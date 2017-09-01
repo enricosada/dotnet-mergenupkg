@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ClassLibrary
+namespace sample2_dotnetcore
 {
     public class Class1
     {

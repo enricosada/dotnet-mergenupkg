@@ -302,7 +302,7 @@ module CommandLineArgParser =
 let showHelp () =
     """
 Usage:
-  dotnet mergenupkg --source a.nupkg --other b.nupkg --framework netstandard1.5
+  dotnet mergenupkg --source a.nupkg --other b.nupkg --framework netstandard1.6
   dotnet mergenupkg --source a.nupkg --other b.nupkg --framework dnxcore50 --framework-name "DNXCore5.0"
   dotnet mergenupkg --help
  

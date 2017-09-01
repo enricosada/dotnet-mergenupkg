@@ -1,0 +1,17 @@
+<Project ToolsVersion="15.0">
+
+  <PropertyGroup>
+    <Version>2.0.0</Version>
+    <Authors>Enrico Sada</Authors>
+    <Summary>Merge nupkg dependencies</Summary>
+    <Description>Merge dependencies of two nupkg packages</Description>
+    <PackageTags>nuget, nupkg</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <RepoDir>$(MSBuildThisFileDirectory)</RepoDir>
+    <ArtifactsDir>$(RepoDir)/artifacts</ArtifactsDir>
+    <NupkgsDir>$(ArtifactsDir)/nupkgs</NupkgsDir>
+  </PropertyGroup>
+
+</Project>

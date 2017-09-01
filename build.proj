@@ -1,0 +1,15 @@
+<Project DefaultTargets="Package" ToolsVersion="15.0">
+ 
+  <Import Project="Directory.Build.props" />
+
+  <Target Name="Pack">
+    <RemoveDir Directories="$(NupkgsDir)" />
+
+    <Exec Command='dotnet pack -o "$(NupkgsDir)" ' WorkingDirectory="$(RepoDir)/src/dotnet-mergenupkg" />
+  </Target>
+
+  <Target Name="Test">
+    <Exec Command='dotnet msbuild /t:Test' WorkingDirectory="$(RepoDir)/test" />
+  </Target>
+
+</Project>
