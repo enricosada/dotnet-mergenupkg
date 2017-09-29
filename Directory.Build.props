@@ -1,11 +1,14 @@
 <Project ToolsVersion="15.0">
 
   <PropertyGroup>
-    <Version>2.0.0</Version>
+    <Version>2.1.0</Version>
     <Authors>Enrico Sada</Authors>
     <Summary>Merge nupkg dependencies</Summary>
     <Description>Merge dependencies of two nupkg packages</Description>
     <PackageTags>nuget, nupkg</PackageTags>
+    <PackageProjectUrl>https://github.com/dotnet/netcorecli-fsc</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/enricosada/dotnet-mergenupkg.git</RepositoryUrl>
   </PropertyGroup>
 
   <PropertyGroup>

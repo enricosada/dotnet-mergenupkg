@@ -5,7 +5,7 @@
   <Target Name="Pack">
     <RemoveDir Directories="$(NupkgsDir)" />
 
-    <Exec Command='dotnet pack -o "$(NupkgsDir)" ' WorkingDirectory="$(RepoDir)/src/dotnet-mergenupkg" />
+    <Exec Command='dotnet pack -c Release -o "$(NupkgsDir)" ' WorkingDirectory="$(RepoDir)/src/dotnet-mergenupkg" />
   </Target>
 
   <Target Name="Test">
