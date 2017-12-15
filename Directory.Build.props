@@ -1,7 +1,7 @@
 <Project ToolsVersion="15.0">
 
   <PropertyGroup>
-    <Version>2.1.0</Version>
+    <Version>2.2.0</Version>
     <Authors>Enrico Sada</Authors>
     <Summary>Merge nupkg dependencies</Summary>
     <Description>Merge dependencies of two nupkg packages</Description>

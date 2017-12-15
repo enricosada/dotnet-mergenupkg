@@ -9,7 +9,7 @@
   </Target>
 
   <Target Name="Test">
-    <Exec Command='dotnet msbuild /t:Test' WorkingDirectory="$(RepoDir)/test" />
+    <Exec Command='dotnet run -- "$(Version)" --fail-on-focused-tests' WorkingDirectory="$(RepoDir)/test/dotnet-mergenupkg.Tests" />
   </Target>
 
 </Project>
