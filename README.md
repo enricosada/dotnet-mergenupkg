@@ -28,7 +28,7 @@ After a `restore`, can be invoked from same directory with
 
 ```
 dotnet mergenupkg --help
-``
+```
 
 **NOTE** like every .net cli tool, must run in msbuild project file directory where is declared.
 So if you run it from build script, change the current directory before execute the command.
