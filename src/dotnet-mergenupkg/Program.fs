@@ -10,8 +10,9 @@ type DotnetFrameworkId = { Id: string; LongName: string }
     
 let knownDotnetFrameworks = [
     yield { Id = "dnxcore50"; LongName = "DNXCore5.0" }
-    yield { Id = "netcoreapp1.0"; LongName = ".NETCoreApp1.0" }
-    for x in ["4.0"; "4.5"; "4.5.2"; "4.6"; "4.6.1"; "4.6.2"; "4.7"; "4.7.1"] do
+    for x in ["1.0"; "2.0"] do
+        yield { Id = sprintf "netcoreapp%s" x; LongName = sprintf ".NETCoreApp%s" x }
+    for x in ["2.0"; "3.0"; "3.5"; "4.0"; "4.5"; "4.5.2"; "4.6"; "4.6.1"; "4.6.2"; "4.7"; "4.7.1"] do
         yield { Id = sprintf "net%s" (x.Replace(".", "")); LongName = sprintf ".NETFramework%s" x }
     let netstandard = 
         [ for x in 1.0m .. 0.1m .. 1.6m do yield x
@@ -148,6 +149,73 @@ module NuspecXml =
         |> useDependenciesGroup
         
 
+    /// Replace the fallbackgroup, to be a tfm group
+    let replaceFallbackGroup getDefaultFallbackGroupTFMs (nuspecDoc: NuspecXmlDoc) =
+        let doc = XDocument(nuspecDoc)
+        match doc |> dependencies with
+        | None -> nuspecDoc
+        | Some deps ->
+            let isGroupWithTfm f (d: XElement) =
+                if d.Name.LocalName = "group" then
+                    let tfm = d.Attribute(XName.Get("targetFramework")) |> Option.ofObj |> Option.map (fun a -> a.Value)
+                    f tfm
+                else
+                    false
+            let isFallbackGroup =
+                isGroupWithTfm (fun tfm ->
+                    match tfm with
+                    | None -> true
+                    | Some x -> String.IsNullOrEmpty(x) )
+
+            match deps.Elements() |> Seq.tryFind isFallbackGroup with
+            | None ->
+                nuspecDoc
+            | Some d ->
+                let known, unknown =
+                    getDefaultFallbackGroupTFMs ()
+                    |> List.fold (fun (k,u) t ->
+                            match t with
+                            | Choice1Of2 x -> (x :: k, u)
+                            | Choice2Of2 x -> (k, x :: u)
+                        ) ([],[])
+
+                match known, unknown with
+                | [], [] ->
+                    // no libs
+                    nuspecDoc
+                | tfms, [] ->
+                    // all tfms are known, replace fallback group
+                    for tfm in tfms do
+                        if deps.Elements() |> Seq.exists (isGroupWithTfm (fun s -> s = Some(tfm.LongName))) then
+                            // a group for that tfm is already specified, no need to add it
+                            ()
+                        else
+                            let dupe = XElement(d) //deep copy
+                            dupe.SetAttributeValue(XName.Get("targetFramework"), tfm.LongName)
+                            deps.Add(dupe)
+                    d.Remove()
+                    doc
+                | tfms, unknownTfms ->
+                    // there are some unknown tfm. leave it as now
+                    let warning f = Printf.ksprintf (printfn "warning: %s") f
+                    warning "Found a fallback group for dependencies in the nuspec."
+                    warning "more info in https://github.com/enricosada/dotnet-mergenupkg/issues/8"
+                    warning ""
+                    warning "Tried to infer the list of frameworks from the lib dir (inside the nupkg)"
+                    warning "but some target frameworks are unknown:"
+                    unknownTfms
+                    |> List.iter (warning "- '%s'")
+                    warning "the target frameworks found and known are:"
+                    tfms
+                    |> List.iter (fun fw -> warning "- '%s' (%s)" fw.Id fw.LongName)
+                    warning ""
+                    warning "Cannot replace the fallback group, if there are unknown target frameworks."
+                    warning "Leaving the fallback group as is."
+                    warning ""
+                    warning "please open an issue in https://github.com/enricosada/dotnet-mergenupkg/issues "
+                    nuspecDoc
+
+
 type NupkgFile = ZipArchive
 
 module Nupkg =
@@ -156,31 +224,46 @@ module Nupkg =
         archive.Entries
         |> Seq.tryFind (fun entry -> entry.FullName.EndsWith(".nuspec"))
 
+    let private parseDocFrom (nuspec: ZipArchiveEntry) : NuspecXmlDoc =
+        use stream = nuspec.Open()
+        use reader = new StreamReader(stream)
+        let text = reader.ReadToEnd()
+        try
+            XDocument.Parse(text)
+        with :? System.Xml.XmlException ->
+            eprintfn "invalid xml '%s' " text
+            reraise()
+
     let private mapNuspec f archive =
         match archive |> nuspecEntry with
         | None -> None
         | Some nuspec ->
-            use stream = nuspec.Open()
-            let xml : NuspecXmlDoc = XDocument.Load(stream)
+            let xml = parseDocFrom nuspec
             Some (f xml)
-
-    let private updateNuspec (f: NuspecXmlDoc -> NuspecXmlDoc) archive =
-        match archive |> nuspecEntry with
-        | None -> ()
-        | Some nuspec ->
-            let xml =
-                use stream = nuspec.Open()
-                use reader = new StreamReader(stream)
-                let text = reader.ReadToEnd().Replace("</package>ge>", "</package>")
-                XDocument.Parse(text)
-            let doc = f xml
-            use writer = new StreamWriter(nuspec.Open())
-            doc.Save(writer, SaveOptions.OmitDuplicateNamespaces)
 
     let private addFile path (stream: Stream) (archive: NupkgFile) =
         let e = archive.CreateEntry(path)
         use entryStream = e.Open()
         stream.CopyTo(entryStream)
+
+    let private updateNuspec (f: NuspecXmlDoc -> NuspecXmlDoc) archive =
+        match archive |> nuspecEntry with
+        | None -> ()
+        | Some nuspec ->
+            let nuspecName = nuspec.FullName
+
+            let xml = parseDocFrom nuspec
+
+            let doc = f xml
+
+            use ms = new MemoryStream()
+            doc.Save(ms, SaveOptions.OmitDuplicateNamespaces)
+            ms.Position <- 0L
+            
+            // delete it, and readd it.
+            // safer than write the rewrite the stream
+            nuspec.Delete()
+            archive |> addFile nuspecName ms
 
     let private getFiles filterBy (archive: NupkgFile) =
         archive.Entries
@@ -191,9 +274,32 @@ module Nupkg =
         | true -> ZipFile.Open(nupkgPath, mode) |> Ok
         | false -> Error [ sprintf "nupkg '%s' not found" nupkgPath ]
 
+    let inferFallbackGroup (npkg: NupkgFile) () =
+        let pickKnownFramework fwId =
+            knownDotnetFrameworks
+            |> List.tryFind (fun f -> f.Id.Equals(fwId, StringComparison.OrdinalIgnoreCase))
+
+        npkg
+        |> getFiles (fun e -> e.StartsWith("lib/", StringComparison.OrdinalIgnoreCase) && e.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+        |> Seq.map (fun e -> e.FullName)
+#if NETCOREAPP1_0
+        |> Seq.map (fun path -> path.Replace("lib/", ""))
+#else
+        |> Seq.map (fun path -> path.Replace("lib/", "", StringComparison.OrdinalIgnoreCase))
+#endif
+        |> Seq.map (fun path -> path |> Seq.takeWhile ((<>) '/') |> Seq.toArray |> String)
+        |> Seq.map (fun tfm ->
+            match pickKnownFramework tfm with
+            | Some fw -> Choice1Of2 fw
+            | None -> Choice2Of2 tfm)
+        |> Seq.toList
+
     let mergeDependency (other: NupkgFile) (fw: DotnetFrameworkId) (source: NupkgFile) =
         //normalize source nuspec
         source |> updateNuspec (NuspecXml.normalize)
+
+        //remove fallbackgroup
+        source |> updateNuspec (NuspecXml.replaceFallbackGroup (inferFallbackGroup source))
 
         let group = other |> mapNuspec (NuspecXml.dependencyGroup (Some fw))
 
@@ -280,10 +386,10 @@ module CommandLineArgParser =
                 match f with
                 | Some fw -> Ok fw
                 | None ->
-                knownDotnetFrameworks 
-                |> List.map (fun { Id = i; LongName = l } -> sprintf "- %s: %s" i l)
-                |> List.append [sprintf "Invalid framework id '%s'" fwId; ""; "Known frameworks: "] 
-                |> Error
+                    knownDotnetFrameworks 
+                    |> List.map (fun { Id = i; LongName = l } -> sprintf "- %s: %s" i l)
+                    |> List.append [sprintf "Invalid framework id '%s'" fwId; ""; "Known frameworks: "] 
+                    |> Error
 
             let! fws = 
                 match argv.Frameworks with

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Lib7</AssemblyName>
+    <NuspecFile>$(MSBuildThisFileDirectory)\Template.nuspec</NuspecFile>
+    <NuspecProperties>version=$(Version)</NuspecProperties>
+  </PropertyGroup>
+
+</Project>
