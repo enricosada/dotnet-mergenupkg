@@ -12,8 +12,7 @@ open System.Xml.Linq
 
 let RepoDir = (__SOURCE_DIRECTORY__ /".." /"..") |> Path.GetFullPath
 let TestRunDir = RepoDir/"test"/"testrun"
-let ArtifactsDir = RepoDir/"artifacts"
-let NupkgsDir = ArtifactsDir/"nupkgs"
+let NupkgsDir = RepoDir/"bin"/"nupkg"
 
 let SamplePkgVersion = "1.0.0"
 let SamplePkgDir = TestRunDir/"pkgs"/"SamplePkgDir"

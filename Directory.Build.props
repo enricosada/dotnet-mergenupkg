@@ -1,7 +1,6 @@
 <Project ToolsVersion="15.0">
 
   <PropertyGroup>
-    <Version>2.2.0</Version>
     <Authors>Enrico Sada</Authors>
     <Summary>Merge nupkg dependencies</Summary>
     <Description>Merge dependencies of two nupkg packages</Description>
@@ -12,9 +11,10 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <RepoDir>$(MSBuildThisFileDirectory)</RepoDir>
-    <ArtifactsDir>$(RepoDir)/artifacts</ArtifactsDir>
-    <NupkgsDir>$(ArtifactsDir)/nupkgs</NupkgsDir>
+    <RepoRootDir>$([System.IO.Path]::GetFullPath("$(MSBuildThisFileDirectory)"))</RepoRootDir>
+    <NupkgsDir>$([System.IO.Path]::GetFullPath("$(RepoRootDir)/bin/nupkg"))</NupkgsDir>
+    <Version Condition=" '$(Version)' == '' ">2.2.0$(VersionSuffix)</Version>
+    <MonoOrEmpty Condition=" '$(OS)' != 'Windows_NT' ">mono </MonoOrEmpty>
   </PropertyGroup>
 
 </Project>

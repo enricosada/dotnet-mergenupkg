@@ -34,7 +34,29 @@ dotnet mergenupkg --help
 So if you run it from build script, change the current directory before execute the command.
 
 
-# Build
 
-Run `dotnet msbuild /t:Pack` to create the package in `artifacts/nupkgs`
-Run `dotnet msbuild /t:Test` to run tests
+## Build
+
+Clone repo.
+
+Run:
+
+```bash
+dotnet build
+```
+
+To run tests:
+
+```bash
+dotnet test -v n
+```
+
+To create packages:
+
+```bash
+dotnet pack
+```
+
+will create packages in `bin\nupkg`
+
+pass `/p:Version=1.2.3` to create a package with version `1.2.3`

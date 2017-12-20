@@ -8,8 +8,8 @@ install:
   - export FrameworkPathOverride=$(dirname $(which mono))/../lib/mono/4.5/
 
 script:
-  - dotnet msbuild /t:Pack
-  - dotnet msbuild /t:Test
+  - dotnet pack -v n
+  - dotnet test -v n
 
 matrix:
   include:
