@@ -7,12 +7,12 @@
             "taskName": "build",
             "command": "dotnet build",
             "options": {
-                "cwd": "src/dotnet-mergenupkg"
+                "cwd": "${workspaceRoot}/src/dotnet-mergenupkg"
             },
             "type": "shell",
             "group": "build",
             "presentation": {
-                "reveal": "silent"
+                "reveal": "always"
             },
             "problemMatcher": "$msCompile"
         }
