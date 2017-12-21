@@ -21,16 +21,32 @@ let SamplePkgDir = TestRunDir/"pkgs"/"SamplePkgDir"
 let checkExitCodeZero (cmd: Command) =
     Expect.equal 0 cmd.Result.ExitCode "command finished with exit code non-zero."
 
-let packLibs (fs: FileUtils) projDirs =
+let packSamples (fs: FileUtils) =
+
+    fs.rm_rf (TestRunDir/"pkgs")
+
     fs.mkdir_p (TestRunDir/"pkgs")
 
-    let dotnetPack workDir =
+    let dotnetPack additionalArgs workDir =
       fs.cd workDir
-      fs.shellExecRun "dotnet" [ "pack"; "-o"; SamplePkgDir; sprintf "/p:Version=%s" SamplePkgVersion ]
+      fs.shellExecRun "dotnet" ([ "pack"; "-o"; SamplePkgDir; sprintf "/p:Version=%s" SamplePkgVersion ] @ additionalArgs)
       |> checkExitCodeZero
 
-    for projDir in projDirs do
-      dotnetPack projDir
+    let repo s = RepoDir/"test"/"examples"/s.ProjDir
+
+    [ ``samples1 Net45``
+      ``samples2 NetStandard2.0``
+      ``samples3 NetStandard1.6``
+      ``samples4 fallbackgrp``
+      ``samples5 fallbackgrp spec201108``
+      ``samples6 fallbackgrp multifw``
+      ``samples7 fallbackgrp multifw with unknown fw``
+      ``samples8 NetCoreApp2.0`` ]
+    |> List.map repo
+    |> List.iter (dotnetPack [])
+
+    [ ``samples2 NetStandard2.0 with xmldoc`` ]
+    |> List.iter (fun proj -> repo proj |> dotnetPack [ "/p:GenerateDocumentationFile=true"; sprintf "/p:PackageId=%s" proj.PackageName ])
 
 let prepareTool (fs: FileUtils) pkgUnderTestVersion =
     fs.rm_rf (TestRunDir/"sdk2")
@@ -59,7 +75,7 @@ let merge (fs: FileUtils) sourceNupkgPath otherNupkgPath tfm =
     fs.shellExecRun "dotnet" [ "mergenupkg"; "--source"; sourceNupkgPath; "--other"; otherNupkgPath; "--framework"; tfm ]
 
 let nupkgReadonlyPath source =
-    SamplePkgDir/(sprintf "%s.%s.nupkg" source.AssemblyName SamplePkgVersion)
+    SamplePkgDir/(sprintf "%s.%s.nupkg" source.PackageName SamplePkgVersion)
 
 let copyNupkgFromAssets (fs: FileUtils) source outDir =
     fs.mkdir_p outDir
@@ -130,11 +146,7 @@ let tests pkgUnderTestVersion =
       prepareTool fs pkgUnderTestVersion
 
       // restore samples, and pack it
-      fs.rm_rf (TestRunDir/"pkgs")
-
-      allSamples
-      |> List.map (fun s -> RepoDir/"test"/"examples"/s.ProjDir)
-      |> packLibs fs
+      packSamples fs
     )
 
   let withLog name f test =
@@ -171,7 +183,7 @@ let tests pkgUnderTestVersion =
         |> checkExitCodeZero
 
         { PackageName = ``samples1 Net45``.PackageName
-          Files = [ ``samples1 Net45``.Assembly; ``samples3 NetStandard1.6``.Assembly ]
+          Files = ``samples1 Net45``.Files @ ``samples3 NetStandard1.6``.Files
           Nuspec = ``samples1 Net45``.Nuspec @ ``samples3 NetStandard1.6``.Nuspec }
         |> checkNupkgContent fs (testDir/"out") sourceNupkgPath
       )
@@ -185,7 +197,7 @@ let tests pkgUnderTestVersion =
         |> checkExitCodeZero
 
         { PackageName = ``samples1 Net45``.PackageName
-          Files = [ ``samples1 Net45``.Assembly; ``samples2 NetStandard2.0``.Assembly ]
+          Files = ``samples1 Net45``.Files @ ``samples2 NetStandard2.0``.Files
           Nuspec = ``samples1 Net45``.Nuspec @ ``samples2 NetStandard2.0``.Nuspec }
         |> checkNupkgContent fs (testDir/"out") sourceNupkgPath
       )
@@ -204,9 +216,9 @@ let tests pkgUnderTestVersion =
         |> checkExitCodeZero
 
         { PackageName = ``samples1 Net45``.PackageName
-          Files = [ ``samples1 Net45``.Assembly
-                    ``samples2 NetStandard2.0``.Assembly
-                    ``samples3 NetStandard1.6``.Assembly ]
+          Files = [ ``samples1 Net45``.Files
+                    ``samples2 NetStandard2.0``.Files
+                    ``samples3 NetStandard1.6``.Files ] |> List.collect id
           Nuspec = ``samples1 Net45``.Nuspec
                    @ ``samples2 NetStandard2.0``.Nuspec
                    @ ``samples3 NetStandard1.6``.Nuspec }
@@ -224,7 +236,7 @@ let tests pkgUnderTestVersion =
         |> checkExitCodeZero
 
         { PackageName = ``samples4 fallbackgrp``.PackageName
-          Files = [ ``samples4 fallbackgrp``.Assembly; ``samples2 NetStandard2.0``.Assembly ]
+          Files = ``samples4 fallbackgrp``.Files @ ``samples2 NetStandard2.0``.Files
           Nuspec = 
            [ GroupWithTFM(
               tfm = ".NETFramework4.0",
@@ -243,7 +255,7 @@ let tests pkgUnderTestVersion =
         |> checkExitCodeZero
 
         { PackageName = ``samples5 fallbackgrp spec201108``.PackageName
-          Files = [ ``samples5 fallbackgrp spec201108``.Assembly; ``samples2 NetStandard2.0``.Assembly ]
+          Files = ``samples5 fallbackgrp spec201108``.Files @ ``samples2 NetStandard2.0``.Files
           Nuspec = 
            [ GroupWithTFM(
               tfm = ".NETFramework4.5",
@@ -265,7 +277,7 @@ let tests pkgUnderTestVersion =
            GroupWithTFM(tfm, [ PackageDep (id = "Argu", version = "3.2.0", exclude = None) ])
 
         { PackageName = ``samples6 fallbackgrp multifw``.PackageName
-          Files = [ ``samples6 fallbackgrp multifw``.Assembly; ``samples2 NetStandard2.0``.Assembly ]
+          Files = ``samples6 fallbackgrp multifw``.Files @ ``samples2 NetStandard2.0``.Files
           Nuspec =
            [ group ".NETFramework2.0"
              group ".NETFramework3.5"
@@ -289,10 +301,26 @@ let tests pkgUnderTestVersion =
         Expect.stringContains cmd.Result.StandardOutput "unknfw123" "check output"
 
         { PackageName = ``samples7 fallbackgrp multifw with unknown fw``.PackageName
-          Files = [ ``samples7 fallbackgrp multifw with unknown fw``.Assembly; ``samples2 NetStandard2.0``.Assembly ]
+          Files = ``samples7 fallbackgrp multifw with unknown fw``.Files @ ``samples2 NetStandard2.0``.Files
           Nuspec =
             ``samples7 fallbackgrp multifw with unknown fw``.Nuspec
             @ ``samples2 NetStandard2.0``.Nuspec }
+        |> checkNupkgContent fs (testDir/"out") sourceNupkgPath
+      )
+    ]
+
+    testList "xml" [
+      testCase |> withLog "merge the xmldoc file" (fun _ fs ->
+        let testDir = inDir fs "out_xmldoc"
+        let sourceNupkgPath = copyNupkgFromAssets fs ``samples1 Net45`` testDir
+        let otherNupkgPath = copyNupkgFromAssets fs ``samples2 NetStandard2.0 with xmldoc`` testDir
+
+        merge fs sourceNupkgPath otherNupkgPath "netstandard2.0"
+        |> checkExitCodeZero
+
+        { PackageName = ``samples1 Net45``.PackageName
+          Files = ``samples1 Net45``.Files @ ``samples2 NetStandard2.0 with xmldoc``.Files
+          Nuspec = ``samples1 Net45``.Nuspec @ ``samples2 NetStandard2.0 with xmldoc``.Nuspec }
         |> checkNupkgContent fs (testDir/"out") sourceNupkgPath
       )
     ]
@@ -331,7 +359,7 @@ let tests pkgUnderTestVersion =
           |> checkExitCodeZero
 
           { PackageName = pkg
-            Files = [ ``samples8 NetCoreApp2.0``.Assembly ]
+            Files = ``samples8 NetCoreApp2.0``.Files
             Nuspec =
               deps
               @ ``samples8 NetCoreApp2.0``.Nuspec }
