@@ -5,7 +5,7 @@
     <Summary>Merge nupkg dependencies</Summary>
     <Description>Merge dependencies of two nupkg packages</Description>
     <PackageTags>nuget, nupkg</PackageTags>
-    <PackageProjectUrl>https://github.com/dotnet/netcorecli-fsc</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/enricosada/dotnet-mergenupkg</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/enricosada/dotnet-mergenupkg.git</RepositoryUrl>
   </PropertyGroup>
