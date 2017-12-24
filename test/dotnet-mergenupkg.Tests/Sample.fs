@@ -41,7 +41,8 @@ let packSamples (fs: FileUtils) =
       ``samples5 fallbackgrp spec201108``
       ``samples6 fallbackgrp multifw``
       ``samples7 fallbackgrp multifw with unknown fw``
-      ``samples8 NetCoreApp2.0`` ]
+      ``samples8 NetCoreApp2.0``
+      ``samples9 fallbackgrp no override`` ]
     |> List.map repo
     |> List.iter (dotnetPack [])
 
@@ -242,6 +243,22 @@ let tests pkgUnderTestVersion =
               tfm = ".NETFramework4.0",
               dependencies =
                 [ PackageDep (id = "FSharp.Core", version = "4.0.0", exclude = None) ]) ]
+            @ ``samples2 NetStandard2.0``.Nuspec }
+        |> checkNupkgContent fs (testDir/"out") sourceNupkgPath
+      )
+
+      testCase |> withLog "do not override specified fw" (fun _ fs ->
+        let testDir = inDir fs "out_fallbackgrp_noov"
+        let sourceNupkgPath = copyNupkgFromAssets fs ``samples9 fallbackgrp no override`` testDir
+        let otherNupkgPath = copyNupkgFromAssets fs ``samples2 NetStandard2.0`` testDir
+
+        merge fs sourceNupkgPath otherNupkgPath "netstandard2.0"
+        |> checkExitCodeZero
+
+        { PackageName = ``samples9 fallbackgrp no override``.PackageName
+          Files = ``samples9 fallbackgrp no override``.Files @ ``samples2 NetStandard2.0``.Files
+          Nuspec = 
+            ``samples9 fallbackgrp no override``.Nuspec
             @ ``samples2 NetStandard2.0``.Nuspec }
         |> checkNupkgContent fs (testDir/"out") sourceNupkgPath
       )

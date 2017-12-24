@@ -89,3 +89,18 @@ let ``samples8 NetCoreApp2.0`` =
     AssemblyName = "Lib8";
     Nuspec = [ GroupWithTFM (tfm = ".NETCoreApp2.0", dependencies = []) ]
     Files = [ "lib"/"netcoreapp2.0"/"Lib8.dll" ] }
+
+let ``samples9 fallbackgrp no override`` =
+  { ProjDir = "sample9-fallbackgrp-no-override";
+    PackageName = "Lib9";
+    AssemblyName = "Lib9";
+    Nuspec =
+       [ GroupWithTFM(
+          tfm = ".NETFramework4.0",
+          dependencies =
+            [ PackageDep (id = "FSharp.Core", version = "4.1.0", exclude = None) ])
+         GroupWithTFM(
+          tfm = ".NETFramework4.5",
+          dependencies =
+            [ PackageDep (id = "FSharp.Core", version = "4.1.0", exclude = None) ]) ]
+    Files = [ "lib"/"net40"/"Lib9.dll"; "lib"/"net45"/"Lib9.dll" ] }

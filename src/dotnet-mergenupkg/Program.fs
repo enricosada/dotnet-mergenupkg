@@ -188,7 +188,7 @@ module NuspecXml =
                 | tfms, [] ->
                     // all tfms are known, replace fallback group
                     for tfm in tfms do
-                        if deps.Elements() |> Seq.exists (isGroupWithTfm (fun s -> s = Some(tfm.LongName))) then
+                        if deps.Elements() |> Seq.exists (isGroupWithTfm (fun s -> s = Some(tfm.LongName) || s = Some(tfm.Id))) then
                             // a group for that tfm is already specified, no need to add it
                             ()
                         else
