@@ -19,6 +19,8 @@ let knownDotnetFrameworks = [
           yield 2.0m ]
     for x in netstandard do 
         yield { Id = sprintf "netstandard%M" x; LongName = sprintf ".NETStandard%M" x }
+    for x in [ "net45+netcore45"; "net45+netcore45+wp8"; "net45+netcore45+wpa81+wp8" ] do 
+        yield { Id = sprintf "portable-%s" x; LongName = sprintf ".NETPortable,Version=v0.0,Profile=%s" x }
     ]
 
 [<RequireQualifiedAccess>]
