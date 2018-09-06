@@ -5,12 +5,14 @@
 
 Merge two nuget package dependencies
 
-Useful to add .NET Core dependencies (assemblies, nuspec deps) built with .NET Core Sdk inside 
+Useful to add .NET Core dependencies (assemblies, nuspec deps, tools) built with .NET Core Sdk inside 
 an existing .nupkg
 
 ```
-dotnet mergenupkg --source a.nupkg --other b.nupkg --framework netstandard1.6
+dotnet mergenupkg --source a.nupkg --other b.nupkg --framework netstandard2.0
 ```
+
+The above command will modify the package `a.nupkg` adding the package dependencies and files (assemblies, xmldoc) for target framework `netstandard2.0` from package `b.nupkg`
 
 see `dotnet mergenupkg --help` for more info
 
@@ -20,7 +22,7 @@ Add it as .NET CLI tool
 
 ```xml
   <ItemGroup>
-    <DotNetCliToolReference Include="dotnet-mergenupkg" Version="2.0.*" />
+    <DotNetCliToolReference Include="dotnet-mergenupkg" Version="2.*" />
   </ItemGroup>
 ```
 
@@ -31,7 +33,7 @@ dotnet mergenupkg --help
 ```
 
 **NOTE** like every .net cli tool, must run in msbuild project file directory where is declared.
-So if you run it from build script, change the current directory before execute the command.
+So if you run it from a build script, change the current directory before execute the command.
 
 
 
