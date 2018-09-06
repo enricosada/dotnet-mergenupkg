@@ -42,7 +42,8 @@ let packSamples (fs: FileUtils) =
       ``samples6 fallbackgrp multifw``
       ``samples7 fallbackgrp multifw with unknown fw``
       ``samples8 NetCoreApp2.0``
-      ``samples9 fallbackgrp no override`` ]
+      ``samples9 fallbackgrp no override``
+      ``samples10 dotnet tool`` ]
     |> List.map repo
     |> List.iter (dotnetPack [])
 
@@ -74,6 +75,10 @@ let prepareTool (fs: FileUtils) pkgUnderTestVersion =
 let merge (fs: FileUtils) sourceNupkgPath otherNupkgPath tfm =
     fs.cd (TestRunDir/"sdk2")
     fs.shellExecRun "dotnet" [ "mergenupkg"; "--source"; sourceNupkgPath; "--other"; otherNupkgPath; "--framework"; tfm ]
+
+let mergeTool (fs: FileUtils) sourceNupkgPath otherNupkgPath =
+    fs.cd (TestRunDir/"sdk2")
+    fs.shellExecRun "dotnet" [ "mergenupkg"; "--source"; sourceNupkgPath; "--other"; otherNupkgPath; "--tools" ]
 
 let nupkgReadonlyPath source =
     SamplePkgDir/(sprintf "%s.%s.nupkg" source.PackageName SamplePkgVersion)
@@ -116,7 +121,14 @@ let checkNupkgContent (fs: FileUtils) dir sourceNupkgPath nupkgModel =
       [ let e = xml.Root |> el "metadata" |> el "dependencies"
         yield! e.Elements() ]
 
-    Expect.equal depsXml.Length nupkgModel.Nuspec.Length (invalidXml "expected same length of '%A'" nupkgModel.Nuspec)
+    let nuspecDepsExpected, packageTypesNuspecExpected =
+      nupkgModel.Nuspec
+      |> List.partition (function
+        | GroupWithTFM _ -> true
+        | FallbackGroup _ -> true
+        | PackageType _ -> false)
+    let packageTypesExpected = packageTypesNuspecExpected |> List.map (function PackageType pt -> pt | x -> failwithf "expected PackageType but was '%A" x)
+    Expect.equal depsXml.Length nuspecDepsExpected.Length (invalidXml "expected same length of '%A'" nupkgModel.Nuspec)
 
     let depsParsed =
       [ for x in depsXml ->
@@ -134,8 +146,24 @@ let checkNupkgContent (fs: FileUtils) dir sourceNupkgPath nupkgModel =
                 PackageDep(id = id, version = version, exclude = exclude) ]
           group deps ]
 
-    Expect.containsAll depsParsed nupkgModel.Nuspec (sprintf "expecting deps '\n%A\n' but was '\n%O\n' (parsed as '\n%A\n')" nupkgModel.Nuspec depsXml depsParsed)
-    Expect.containsAll nupkgModel.Nuspec depsParsed (sprintf "expecting deps '\n%A\n' but was '\n%O\n' (parsed as '\n%A\n')" nupkgModel.Nuspec depsXml depsParsed)
+    Expect.containsAll depsParsed nuspecDepsExpected (sprintf "expecting deps '\n%A\n' but was '\n%O\n' (parsed as '\n%A\n')" nuspecDepsExpected depsXml depsParsed)
+    Expect.containsAll nuspecDepsExpected depsParsed (sprintf "expecting deps '\n%A\n' but was '\n%O\n' (parsed as '\n%A\n')" nuspecDepsExpected depsXml depsParsed)
+
+    let packageTypesParsed =
+      let packageTypesXml =
+        [ match (xml.Root |> el "metadata").Element(xn "packageTypes") with
+          | null -> () // packageTypes is not normalized, so is optional
+          | e -> yield! e.Elements() ]
+
+      [ for x in packageTypesXml do
+          Expect.equal "packageType" (x.Name.LocalName) (invalidXml "unknown node '%O'" x)
+
+          match x |> attr "name" with
+          | None -> failwith (invalidXml "expected node with name attribute but was '%O'" x)
+          | Some pt -> yield pt ]
+
+    Expect.containsAll packageTypesParsed packageTypesExpected (sprintf "expecting packageTypes '\n%A\n' but was '\n%O\n' (parsed as '\n%A\n')" packageTypesExpected depsXml packageTypesParsed)
+    Expect.containsAll packageTypesExpected packageTypesParsed (sprintf "expecting packageTypes '\n%A\n' but was '\n%O\n' (parsed as '\n%A\n')" packageTypesExpected depsXml packageTypesParsed)
 
 let tests pkgUnderTestVersion =
 
@@ -338,6 +366,22 @@ let tests pkgUnderTestVersion =
         { PackageName = ``samples1 Net45``.PackageName
           Files = ``samples1 Net45``.Files @ ``samples2 NetStandard2.0 with xmldoc``.Files
           Nuspec = ``samples1 Net45``.Nuspec @ ``samples2 NetStandard2.0 with xmldoc``.Nuspec }
+        |> checkNupkgContent fs (testDir/"out") sourceNupkgPath
+      )
+    ]
+
+    testList "merge-tool" [
+      testCase |> withLog "can merge net45+tool" (fun _ fs ->
+        let testDir = inDir fs "out_net45_plus_tool"
+        let sourceNupkgPath = copyNupkgFromAssets fs ``samples1 Net45`` testDir
+        let otherNupkgPath = copyNupkgFromAssets fs ``samples10 dotnet tool`` testDir
+
+        mergeTool fs sourceNupkgPath otherNupkgPath
+        |> checkExitCodeZero
+
+        { PackageName = ``samples1 Net45``.PackageName
+          Files = ``samples1 Net45``.Files @ ``samples10 dotnet tool``.Files
+          Nuspec = ``samples1 Net45``.Nuspec @ ``samples10 dotnet tool``.Nuspec }
         |> checkNupkgContent fs (testDir/"out") sourceNupkgPath
       )
     ]

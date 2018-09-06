@@ -23,6 +23,8 @@ let knownDotnetFrameworks = [
         yield { Id = sprintf "portable-%s" x; LongName = sprintf ".NETPortable,Version=v0.0,Profile=%s" x }
     ]
 
+type NuspecPackageType = string
+
 [<RequireQualifiedAccess>]
 module NuspecManifestSchema =
 
@@ -118,6 +120,49 @@ module NuspecXml =
             let g = group |> changeNamespaceElement d.Name.Namespace
             d.Add(g)
             doc
+
+    let private packageTypesXml (nuspecDoc: NuspecXmlDoc) = 
+        let xn name = XName.Get(name, nuspecDoc.Root.Name.NamespaceName)
+        nuspecDoc.Root |> xe (xn "metadata") |> Option.bind (xe (xn "packageTypes"))
+
+    let packageTypes (nuspecDoc: NuspecXmlDoc) : NuspecPackageType list =
+        match nuspecDoc |> packageTypesXml with
+        | None -> []
+        | Some d ->
+            d.Elements()
+            |> Seq.filter (fun e -> e.Name.LocalName = "packageType")
+            |> Seq.choose (fun e -> e.Attributes() |> Seq.tryPick (fun a -> if a.Name.LocalName = "name" then Some a.Value else None))
+            |> List.ofSeq
+
+    /// Add the packageTypes.packageType if not exists already
+    let addPackageType (packageType: NuspecPackageType) (nuspecDoc: NuspecXmlDoc) =
+        let doc = XDocument(nuspecDoc)
+        let xn name = XName.Get(name, doc.Root.Name.NamespaceName)
+        let createPackageTypeElement packageType =
+            let g = new XElement(xn "packageType")
+            g.SetAttributeValue(XName.Get "name", packageType)
+            g
+        match doc |> packageTypesXml with
+        | None ->
+            let m = doc.Root |> xe (xn "metadata") |> Option.get
+            m.Add(new XElement(xn "packageTypes"))
+            match doc |> packageTypesXml with
+            | None ->
+                failwith "TODO added dependencies node, but cannot find it"
+            | Some d ->
+                d.Add(createPackageTypeElement packageType)
+                doc
+        | Some d ->
+            let packageTypes =
+                d.Elements()
+                |> Seq.filter (fun e -> e.Name.LocalName = "packageType")
+                |> Seq.choose (fun e -> e.Attributes() |> Seq.tryPick (fun a -> if a.Name.LocalName = "name" then Some a.Value else None))
+                |> List.ofSeq
+            if packageTypes |> List.contains packageType then
+                nuspecDoc
+            else
+                d.Add(createPackageTypeElement packageType)
+                doc
 
 
     /// Specifying Dependencies in version 2.0 and above
@@ -320,6 +365,27 @@ module Nupkg =
                 source |> addFile e.FullName stream )
             Ok ()
 
+    let mergeTools (other: NupkgFile) (source: NupkgFile) =
+        //normalize source nuspec
+        source |> updateNuspec NuspecXml.normalize
+
+        let packageTypesOpt = other |> mapNuspec NuspecXml.packageTypes
+
+        match packageTypesOpt with
+        | None -> Error [ "nuspec not found" ]
+        | Some _packageTypes ->
+            //add package type to nuspec
+            source |> updateNuspec (NuspecXml.addPackageType "DotnetTool")
+
+            //add files to nupkg
+            other
+            |> getFiles (fun e -> e.StartsWith("tools/", StringComparison.OrdinalIgnoreCase))
+            |> Seq.iter (fun e ->
+                use stream = e.Open()
+                source |> addFile e.FullName stream )
+
+            Ok ()
+
 
 module DotnetCliFSharpHelpers =
 
@@ -332,6 +398,15 @@ module DotnetCliFSharpHelpers =
         do! sourceNupkg |> Nupkg.mergeDependency cliNupkg fw 
         }
 
+    let addToolsToNupkg nupkgNetcorePath nupkgPath = attempt {
+
+        use! sourceNupkg = Nupkg.openFile nupkgPath ZipArchiveMode.Update
+
+        use! cliNupkg = Nupkg.openFile nupkgNetcorePath ZipArchiveMode.Read
+
+        do! sourceNupkg |> Nupkg.mergeTools cliNupkg 
+        }
+
 
 type FilePath = string
 type DirectoryPath = string
@@ -339,10 +414,15 @@ type DirectoryPath = string
 type CmdLineArguments =
     | Help
     | Merge of MergeArguments
+    | MergeTools of MergeToolsArguments
 and MergeArguments = {
         SourceNupkg: FilePath;
         CliNupkg: FilePath;
         TargetFramework: DotnetFrameworkId;
+    }
+and MergeToolsArguments = {
+        SourceNupkg: FilePath;
+        CliNupkg: FilePath;
     }
 
 module CommandLineArgParser =
@@ -351,6 +431,7 @@ module CommandLineArgParser =
         Source: string option;
         Other: string option;
         Frameworks: (string * string option) list;
+        Tools: bool;
         Help: bool;
     }
 
@@ -363,11 +444,12 @@ module CommandLineArgParser =
             | "--other" :: x :: xs -> inner xs { r with Other = Some (trimQuotes x) }
             | "--framework" :: x :: "--framework-name" :: n :: xs -> inner xs { r with Frameworks = [((trimQuotes x), Some (trimQuotes x))] |> List.append r.Frameworks }
             | "--framework" :: x :: xs -> inner xs { r with Frameworks = [((trimQuotes x), None)] |> List.append r.Frameworks }
+            | "--tools" :: xs -> inner xs { r with Tools = true }
             | "-h" :: xs -> inner xs { r with Help = true }
             | "--help" :: xs -> inner xs { r with Help = true }
             | xs -> Error [ (sprintf "invalid args: %A" xs) ]
 
-        { Source = None; Other = None; Help = false; Frameworks = [] }
+        { Source = None; Other = None; Tools = false; Help = false; Frameworks = [] }
         |> inner argv 
 
 
@@ -393,14 +475,22 @@ module CommandLineArgParser =
                     |> List.append [sprintf "Invalid framework id '%s'" fwId; ""; "Known frameworks: "] 
                     |> Error
 
-            let! fws = 
-                match argv.Frameworks with
-                | [] ->  Error [sprintf "argument %s is required" "--framework"]
-                | [ l, None ] -> l |> validateFrameworkId
-                | [ id, Some n ] -> Ok { Id = id; LongName = n }
-                | l -> Error [sprintf "multiple framework not supported"]
+            if argv.Tools then
+                let! fws = 
+                    match argv.Frameworks with
+                    | [] ->  Ok None
+                    | l -> Error [sprintf "multiple framework not supported"]
 
-            return Merge { SourceNupkg = source; CliNupkg = other; TargetFramework = fws; }
+                return MergeTools { SourceNupkg = source; CliNupkg = other }
+            else
+                let! fws = 
+                    match argv.Frameworks with
+                    | [] ->  Error [sprintf "argument %s is required" "--framework"]
+                    | [ l, None ] -> l |> validateFrameworkId
+                    | [ id, Some n ] -> Ok { Id = id; LongName = n }
+                    | l -> Error [sprintf "multiple framework not supported"]
+
+                return Merge { SourceNupkg = source; CliNupkg = other; TargetFramework = fws; }
         }
 
     let parse argv = attempt {
@@ -423,6 +513,7 @@ Options:
   --other            The path of nupkg file to merge
   --framework        The framework id
   --framework-name   The framework name, optional if framework id is known
+  --tools            Merge the dotnet tools instead of lib
     """
     |> printfn "%s"
 
@@ -441,6 +532,12 @@ let main argv =
         0
     | Ok (Merge { SourceNupkg = src; CliNupkg = other; TargetFramework = fw }) ->
         match src |> DotnetCliFSharpHelpers.addNetcoreToNupkg other fw |> runAttempt with
+        | Ok () -> 0
+        | Error x -> 
+            x |> List.iter (printfn "%s")
+            2
+    | Ok (MergeTools { SourceNupkg = src; CliNupkg = other }) ->
+        match src |> DotnetCliFSharpHelpers.addToolsToNupkg other |> runAttempt with
         | Ok () -> 0
         | Error x -> 
             x |> List.iter (printfn "%s")

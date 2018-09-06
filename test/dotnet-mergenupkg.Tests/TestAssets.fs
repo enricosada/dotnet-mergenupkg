@@ -11,6 +11,7 @@ type TestAssetProjInfo =
 and TestAssetProjInfoNuspec =
   | FallbackGroup of dependencies: TestAssetProjInfoNuspecDep list
   | GroupWithTFM of tfm: string * dependencies: TestAssetProjInfoNuspecDep list
+  | PackageType of string
 and TestAssetProjInfoNuspecDep =
   | PackageDep of id: string * version: string * exclude: string option
 
@@ -104,3 +105,15 @@ let ``samples9 fallbackgrp no override`` =
           dependencies =
             [ PackageDep (id = "FSharp.Core", version = "4.1.0", exclude = None) ]) ]
     Files = [ "lib"/"net40"/"Lib9.dll"; "lib"/"net45"/"Lib9.dll" ] }
+
+let ``samples10 dotnet tool`` =
+  { ProjDir = "sample10-tool";
+    PackageName = "sample10-tool";
+    AssemblyName = "sample10-tool";
+    Nuspec = [ PackageType "DotnetTool" ]
+    Files =
+      [ "tools"/"netcoreapp2.1"/"any"/"DotnetToolSettings.xml"
+        "tools"/"netcoreapp2.1"/"any"/"sample10-tool.deps.json"
+        "tools"/"netcoreapp2.1"/"any"/"sample10-tool.dll"
+        "tools"/"netcoreapp2.1"/"any"/"sample10-tool.pdb"
+        "tools"/"netcoreapp2.1"/"any"/"sample10-tool.runtimeconfig.json" ] }

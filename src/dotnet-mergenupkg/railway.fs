@@ -10,6 +10,12 @@ let (|Ok|Error|) x =
     | Choice1Of2 s -> Ok s
     | Choice2Of2 f -> Error f
 
+module Result =
+    let map f (c: Choice<'TOk, 'TErr>) =
+        match c with
+        | Ok x -> Ok (f x)
+        | Error x -> Error x
+
 type Attempt<'S,'F> = (unit -> Result<'S,'F>)
 
 let private succeed x = (fun () -> Ok x)
