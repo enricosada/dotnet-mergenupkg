@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFrameworks>netcoreapp2.0;netcoreapp1.0</TargetFrameworks>
+    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +15,7 @@
       <Pack>true</Pack>
     </Content>
 
+    <PackageReference Include="FSharp.Core" Version="4.3.4" />
   </ItemGroup>
 
 </Project>
