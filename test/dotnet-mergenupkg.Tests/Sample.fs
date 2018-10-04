@@ -80,6 +80,10 @@ let mergeTool (fs: FileUtils) sourceNupkgPath otherNupkgPath =
     fs.cd (TestRunDir/"sdk2")
     fs.shellExecRun "dotnet" [ "mergenupkg"; "--source"; sourceNupkgPath; "--other"; otherNupkgPath; "--tools" ]
 
+let mergeToolf (fs: FileUtils) sourceNupkgPath otherNupkgPath othersArgs =
+    fs.cd (TestRunDir/"sdk2")
+    fs.shellExecRun "dotnet" ([ "mergenupkg"; "--source"; sourceNupkgPath; "--other"; otherNupkgPath; "--tools" ] @ othersArgs )
+
 let nupkgReadonlyPath source =
     SamplePkgDir/(sprintf "%s.%s.nupkg" source.PackageName SamplePkgVersion)
 
@@ -384,6 +388,21 @@ let tests pkgUnderTestVersion =
           Nuspec = ``samples1 Net45``.Nuspec @ ``samples10 dotnet tool``.Nuspec }
         |> checkNupkgContent fs (testDir/"out") sourceNupkgPath
       )
+
+      testCase |> withLog "only files" (fun _ fs ->
+        let testDir = inDir fs "tool_only_files"
+        let sourceNupkgPath = copyNupkgFromAssets fs ``samples1 Net45`` testDir
+        let otherNupkgPath = copyNupkgFromAssets fs ``samples10 dotnet tool`` testDir
+
+        mergeToolf fs sourceNupkgPath otherNupkgPath ["--only-files"]
+        |> checkExitCodeZero
+
+        { PackageName = ``samples1 Net45``.PackageName
+          Files = ``samples1 Net45``.Files @ ``samples10 dotnet tool``.Files
+          Nuspec = ``samples1 Net45``.Nuspec }
+        |> checkNupkgContent fs (testDir/"out") sourceNupkgPath
+      )
+
     ]
 
     testList "realworld" [

@@ -365,7 +365,7 @@ module Nupkg =
                 source |> addFile e.FullName stream )
             Ok ()
 
-    let mergeTools (other: NupkgFile) (source: NupkgFile) =
+    let mergeTools (other: NupkgFile) onlyFiles (source: NupkgFile) =
         //normalize source nuspec
         source |> updateNuspec NuspecXml.normalize
 
@@ -375,7 +375,8 @@ module Nupkg =
         | None -> Error [ "nuspec not found" ]
         | Some _packageTypes ->
             //add package type to nuspec
-            source |> updateNuspec (NuspecXml.addPackageType "DotnetTool")
+            if not onlyFiles then
+                source |> updateNuspec (NuspecXml.addPackageType "DotnetTool")
 
             //add files to nupkg
             other
@@ -398,13 +399,13 @@ module DotnetCliFSharpHelpers =
         do! sourceNupkg |> Nupkg.mergeDependency cliNupkg fw 
         }
 
-    let addToolsToNupkg nupkgNetcorePath nupkgPath = attempt {
+    let addToolsToNupkg nupkgNetcorePath onlyFiles nupkgPath = attempt {
 
         use! sourceNupkg = Nupkg.openFile nupkgPath ZipArchiveMode.Update
 
         use! cliNupkg = Nupkg.openFile nupkgNetcorePath ZipArchiveMode.Read
 
-        do! sourceNupkg |> Nupkg.mergeTools cliNupkg 
+        do! sourceNupkg |> Nupkg.mergeTools cliNupkg onlyFiles
         }
 
 
@@ -423,6 +424,7 @@ and MergeArguments = {
 and MergeToolsArguments = {
         SourceNupkg: FilePath;
         CliNupkg: FilePath;
+        OnlyFiles: bool;
     }
 
 module CommandLineArgParser =
@@ -432,6 +434,7 @@ module CommandLineArgParser =
         Other: string option;
         Frameworks: (string * string option) list;
         Tools: bool;
+        OnlyFiles: bool;
         Help: bool;
     }
 
@@ -445,11 +448,12 @@ module CommandLineArgParser =
             | "--framework" :: x :: "--framework-name" :: n :: xs -> inner xs { r with Frameworks = [((trimQuotes x), Some (trimQuotes x))] |> List.append r.Frameworks }
             | "--framework" :: x :: xs -> inner xs { r with Frameworks = [((trimQuotes x), None)] |> List.append r.Frameworks }
             | "--tools" :: xs -> inner xs { r with Tools = true }
+            | "--only-files" :: xs -> inner xs { r with OnlyFiles = true }
             | "-h" :: xs -> inner xs { r with Help = true }
             | "--help" :: xs -> inner xs { r with Help = true }
             | xs -> Error [ (sprintf "invalid args: %A" xs) ]
 
-        { Source = None; Other = None; Tools = false; Help = false; Frameworks = [] }
+        { Source = None; Other = None; Tools = false; Help = false; Frameworks = []; OnlyFiles = false }
         |> inner argv 
 
 
@@ -481,8 +485,13 @@ module CommandLineArgParser =
                     | [] ->  Ok None
                     | l -> Error [sprintf "multiple framework not supported"]
 
-                return MergeTools { SourceNupkg = source; CliNupkg = other }
+                return MergeTools { SourceNupkg = source; CliNupkg = other; OnlyFiles = argv.OnlyFiles }
             else
+                do!
+                    if argv.OnlyFiles then
+                        Error [sprintf "only files not supported"]
+                    else Ok ()
+
                 let! fws = 
                     match argv.Frameworks with
                     | [] ->  Error [sprintf "argument %s is required" "--framework"]
@@ -536,8 +545,8 @@ let main argv =
         | Error x -> 
             x |> List.iter (printfn "%s")
             2
-    | Ok (MergeTools { SourceNupkg = src; CliNupkg = other }) ->
-        match src |> DotnetCliFSharpHelpers.addToolsToNupkg other |> runAttempt with
+    | Ok (MergeTools { SourceNupkg = src; CliNupkg = other; OnlyFiles = onlyFiles }) ->
+        match src |> DotnetCliFSharpHelpers.addToolsToNupkg other onlyFiles |> runAttempt with
         | Ok () -> 0
         | Error x -> 
             x |> List.iter (printfn "%s")
