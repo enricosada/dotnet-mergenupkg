@@ -1,7 +1,7 @@
 language: csharp
 
-mono: 5.2.0
-dotnet: 2.1.401
+mono: latest
+dotnet: 2.1.801
 
 install:
   # workaround for missing .net 4.5 targing pack
@@ -14,7 +14,6 @@ script:
 matrix:
   include:
     - os: linux
-      dist: trusty
-      sudo: required
+      dist: xenial
     - os: osx
       osx_image: xcode9
