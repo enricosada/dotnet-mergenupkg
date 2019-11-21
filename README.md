@@ -3,7 +3,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/nrms1e19gmcl2rty?svg=true)](https://ci.appveyor.com/project/enricosada/dotnet-mergenupkg)
 [![Build status](https://travis-ci.org/enricosada/dotnet-mergenupkg.svg)](https://travis-ci.org/enricosada/dotnet-mergenupkg)
 
-Merge two nuget package dependencies
+Merge two nuget package
 
 Useful to add .NET Core dependencies (assemblies, nuspec deps, tools) built with .NET Core Sdk inside 
 an existing .nupkg
@@ -14,28 +14,23 @@ dotnet mergenupkg --source a.nupkg --other b.nupkg --framework netstandard2.0
 
 The above command will modify the package `a.nupkg` adding the package dependencies and files (assemblies, xmldoc) for target framework `netstandard2.0` from package `b.nupkg`
 
+With `--tools` merge the dotnet tools instead of lib, to bundle a .net core framework dependent app, who can be useful if a package need to run a tool from a known location (like in a `.Sdk` package)
+
 see `dotnet mergenupkg --help` for more info
 
 # Usage
 
-Add it as .NET CLI tool
+Add it as .NET Tool
 
-```xml
-  <ItemGroup>
-    <DotNetCliToolReference Include="dotnet-mergenupkg" Version="2.*" />
-  </ItemGroup>
+```bash
+dotnet tool install -g dotnet-mergenupkg --verson 3.*
 ```
 
-After a `restore`, can be invoked from same directory with
+After that, it can be invoked with
 
 ```
 dotnet mergenupkg --help
 ```
-
-**NOTE** like every .net cli tool, must run in msbuild project file directory where is declared.
-So if you run it from a build script, change the current directory before execute the command.
-
-
 
 ## Build
 
