@@ -10,6 +10,7 @@ open Medallion.Shell
 open System.IO.Compression
 open System.Xml.Linq
 open DotnetMergeNupkg.TestAssets
+open System.Runtime.InteropServices
 
 let RepoDir = (__SOURCE_DIRECTORY__ /".." /"..") |> Path.GetFullPath
 let TestRunDir = RepoDir/"test"/"testrun"
@@ -54,35 +55,38 @@ let prepareTool (fs: FileUtils) pkgUnderTestVersion =
     fs.rm_rf (TestRunDir/"sdk2")
     fs.mkdir_p (TestRunDir/"sdk2")
 
-    fs.cp (RepoDir/"test"/"usetool"/"tools.proj") (TestRunDir/"sdk2")
     fs.createFile (TestRunDir/"sdk2"/"nuget.config") (writeLines 
       [ "<configuration>"
         "  <packageSources>"
         sprintf """    <add key="local" value="%s" />""" NupkgsDir
         "  </packageSources>"
         "</configuration>" ])
-    fs.createFile (TestRunDir/"sdk2"/"Directory.Build.props") (writeLines 
-      [ """<Project ToolsVersion="15.0">"""
-        "  <PropertyGroup>"
-        sprintf """    <PkgUnderTestVersion>%s</PkgUnderTestVersion>""" pkgUnderTestVersion
-        "  </PropertyGroup>"
-        "</Project>" ])
 
     fs.cd (TestRunDir/"sdk2")
-    fs.shellExecRun "dotnet" [ "restore"; "--packages"; "packages" ]
+    fs.shellExecRun "dotnet" [ "tool"; "install"; "--configfile"; (TestRunDir/"sdk2"/"nuget.config"); "--tool-path"; (TestRunDir/"sdk2"); "dotnet-mergenupkg" ]
     |> checkExitCodeZero
+
+let mergeCmd (fs: FileUtils) args =
+    fs.cd (TestRunDir/"sdk2")
+    let exeName =
+      if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) then
+        "dotnet-mergenupkg.exe"
+      else
+        "dotnet-mergenupkg"
+
+    fs.shellExecRun (TestRunDir/"sdk2"/exeName) args
 
 let merge (fs: FileUtils) sourceNupkgPath otherNupkgPath tfm =
     fs.cd (TestRunDir/"sdk2")
-    fs.shellExecRun "dotnet" [ "mergenupkg"; "--source"; sourceNupkgPath; "--other"; otherNupkgPath; "--framework"; tfm ]
+    mergeCmd fs [ "--source"; sourceNupkgPath; "--other"; otherNupkgPath; "--framework"; tfm ]
 
 let mergeTool (fs: FileUtils) sourceNupkgPath otherNupkgPath =
     fs.cd (TestRunDir/"sdk2")
-    fs.shellExecRun "dotnet" [ "mergenupkg"; "--source"; sourceNupkgPath; "--other"; otherNupkgPath; "--tools" ]
+    mergeCmd fs [ "--source"; sourceNupkgPath; "--other"; otherNupkgPath; "--tools" ]
 
 let mergeToolf (fs: FileUtils) sourceNupkgPath otherNupkgPath othersArgs =
     fs.cd (TestRunDir/"sdk2")
-    fs.shellExecRun "dotnet" ([ "mergenupkg"; "--source"; sourceNupkgPath; "--other"; otherNupkgPath; "--tools" ] @ othersArgs )
+    mergeCmd fs ([ "--source"; sourceNupkgPath; "--other"; otherNupkgPath; "--tools" ] @ othersArgs )
 
 let nupkgReadonlyPath source =
     SamplePkgDir/(sprintf "%s.%s.nupkg" source.PackageName SamplePkgVersion)
@@ -206,6 +210,15 @@ let tests pkgUnderTestVersion =
     outDir
 
   [ 
+    testList "commands" [
+      testCase |> withLog "help" (fun _ fs ->
+        let testDir = inDir fs "cmd_help"
+
+        mergeCmd fs [ "--help" ]
+        |> checkExitCodeZero
+      )
+    ]
+
     testList "merge" [
       testCase |> withLog "can merge net45+netstandard1.6" (fun _ fs ->
         let testDir = inDir fs "out_net45_plus_netstandard16"
