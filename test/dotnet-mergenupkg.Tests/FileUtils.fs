@@ -22,7 +22,7 @@ let mkdir_p (logger: Logger) dir =
         >> setField "directory" dir)
       Directory.CreateDirectory(dir) |> ignore
 
-let cp (logger: Logger) from toPath =
+let cp (logger: Logger) (from: string) toPath =
     logger.info(
       eventX "cp '{from}' '{toPath}'"
       >> setField "from" from
