@@ -63,7 +63,7 @@ let prepareTool (fs: FileUtils) pkgUnderTestVersion =
         "</configuration>" ])
 
     fs.cd (TestRunDir/"sdk2")
-    fs.shellExecRun "dotnet" [ "tool"; "install"; "--configfile"; (TestRunDir/"sdk2"/"nuget.config"); "--tool-path"; (TestRunDir/"sdk2"); "dotnet-mergenupkg" ]
+    fs.shellExecRun "dotnet" [ "tool"; "install"; "--configfile"; (TestRunDir/"sdk2"/"nuget.config"); "--tool-path"; (TestRunDir/"sdk2"); "dotnet-mergenupkg"; "--version"; pkgUnderTestVersion ]
     |> checkExitCodeZero
 
 let mergeCmd (fs: FileUtils) args =
