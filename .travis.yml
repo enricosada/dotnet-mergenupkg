@@ -1,6 +1,6 @@
 language: csharp
 
-dotnet: 2.1.802
+dotnet: 2.1.801
 
 script:
   - dotnet pack -v n
