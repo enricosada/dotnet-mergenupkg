@@ -2,20 +2,13 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>netcoreapp2.0;netcoreapp1.0</TargetFrameworks>
-    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
+    <TargetFrameworks>netcoreapp2.1</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Include="railway.fs" />
     <Compile Include="Program.fs" />
-
-    <Content Include="prefercliruntime">
-      <PackagePath>prefercliruntime</PackagePath>
-      <Pack>true</Pack>
-    </Content>
-
-    <PackageReference Include="FSharp.Core" Version="4.3.4" />
+    <PackageReference Update="FSharp.Core" Version="4.7.0" />
   </ItemGroup>
 
 </Project>
